@@ -16,7 +16,7 @@ st.markdown("""<style>
 </style>""", unsafe_allow_html=True)
 
 # ========== LOAD GOOGLE SHEET ========== #
-sheet2_url = "https://docs.google.com/spreadsheets/d/1owRtCO8D3PAHomabSZVLVK6xfgrTo18oNX6Hcq0MMkI/export?format=csv"
+sheet2_url = st.secrets["GOOGLE_SHEET_URL"]
 
 @st.cache_data
 def load_data(sheet_url):
