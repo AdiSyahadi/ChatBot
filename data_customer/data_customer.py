@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
-def show_data_customer(df_customer):
+def show(df_customer):
     st_autorefresh(interval=1000, key="datarefresh")
     st.title("📗 TABEL DATA CUSTOMER")
 
