@@ -1,3 +1,8 @@
 streamlit
 pandas
-plotly
+streamlit-autorefresh
+openai>=1.0.0
+google-generativeai
+python-dotenv
+sqlalchemy
+mysql-connector-python
