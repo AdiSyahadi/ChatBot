@@ -7,8 +7,8 @@ import google.generativeai as genai
 from google.api_core.exceptions import InvalidArgument
 
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
-gemini_api_key = os.getenv("GEMINI_API_KEY")
+openai_api_key = st.secrets["OPENAI_API_KEY"]
+gemini_api_key = st.secrets["GEMINI_API_KEY"]
 
 openai_client = OpenAI(api_key=openai_api_key)
 if gemini_api_key:
