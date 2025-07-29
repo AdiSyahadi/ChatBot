@@ -3,9 +3,9 @@ import streamlit as st
 import pandas as pd
 
 # Import modul-modul halaman
-import home
-import data_customer
-import chatbot
+from home import home
+from data_customer import data_customer
+from chatbot import chatbot
 
 # ========== CONFIGURASI ========== #
 st.set_page_config(page_title="System Meslon Digital", layout="wide")
