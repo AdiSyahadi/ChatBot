@@ -37,8 +37,8 @@ with st.sidebar:
 
 # ========== ROUTING ========== #
 if menu == "🏠 Home":
-    home.home.show()
+    home.show()
 elif menu == "📗 Data Customer":
-    data_customer.data_customer.show(df_customer)
+    data_customer.show(df_customer)
 elif menu == "🤖 ChatBot":
-    chatbot.chatbot.show_chatbot(df_customer)
+    chatbot.show_chatbot(df_customer)
