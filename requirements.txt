@@ -6,3 +6,4 @@ google-generativeai
 python-dotenv
 sqlalchemy
 mysql-connector-python
+gspread oauth2client
