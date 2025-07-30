@@ -1,22 +1,25 @@
 import streamlit as st
 import os
+import requests
 from dotenv import load_dotenv
 import openai
 from openai import OpenAI
 import google.generativeai as genai
 from google.api_core.exceptions import InvalidArgument
 
+# Load API key dari .env
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 gemini_api_key = os.getenv("GEMINI_API_KEY")
+webhook_url = "https://dev-mesondigitalid.app.n8n.cloud/webhook-test/0b353a59-3ad1-420a-b96a-93ebc4ef1f3f"
 
+# Setup client
 openai_client = OpenAI(api_key=openai_api_key)
 if gemini_api_key:
     genai.configure(api_key=gemini_api_key)
 
 def ask_openai_with_data(prompt, df):
     try:
-        # Serialize DataFrame (ringkas)
         df_sample = df.head(10).to_csv(index=False)
         prompt_with_data = f"""
 Berikut adalah data customer (10 baris pertama):
@@ -57,6 +60,19 @@ Sekarang jawab pertanyaan ini:
     except Exception as e:
         return f"❌ Gemini Error: {e}"
 
+def kirim_ke_webhook(prompt, response, model):
+    try:
+        payload = {
+            "prompt": prompt,
+            "response": response,
+            "model": model
+        }
+        r = requests.post(webhook_url, json=payload)
+        return r.status_code == 200
+    except Exception as e:
+        print(f"❌ Gagal kirim ke webhook: {e}")
+        return False
+
 def show_chatbot(df_customer):
     st.title("🤖 ChatBot Analisis Customer")
 
@@ -82,3 +98,9 @@ def show_chatbot(df_customer):
 
                 st.markdown(reply)
                 st.session_state.chat_history.append(("assistant", reply))
+
+                # Kirim ke webhook n8n
+                berhasil = kirim_ke_webhook(prompt, reply, model_choice)
+                if not berhasil:
+                    st.warning("⚠️ Gagal mengirim data ke webhook.")
+
