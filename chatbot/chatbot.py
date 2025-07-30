@@ -1,19 +1,18 @@
 import streamlit as st
 import os
-import requests
 from dotenv import load_dotenv
 import openai
 from openai import OpenAI
 import google.generativeai as genai
 from google.api_core.exceptions import InvalidArgument
+import requests  # ← Tambah import untuk kirim ke webhook
 
-# Load API key dari .env
+# Load API Key
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 gemini_api_key = os.getenv("GEMINI_API_KEY")
-webhook_url = "https://dev-mesondigitalid.app.n8n.cloud/webhook-test/0b353a59-3ad1-420a-b96a-93ebc4ef1f3f"
+webhook_url = os.getenv("AGENT_WEBHOOK_URL")  # ← Tambahkan ini di .env
 
-# Setup client
 openai_client = OpenAI(api_key=openai_api_key)
 if gemini_api_key:
     genai.configure(api_key=gemini_api_key)
@@ -60,23 +59,23 @@ Sekarang jawab pertanyaan ini:
     except Exception as e:
         return f"❌ Gemini Error: {e}"
 
-def kirim_ke_webhook(prompt, response, model):
+def send_to_webhook(prompt):
+    if not webhook_url:
+        return "❌ Webhook URL belum diset di .env (AGENT_WEBHOOK_URL)"
     try:
-        payload = {
-            "prompt": prompt,
-            "response": response,
-            "model": model
-        }
-        r = requests.post(webhook_url, json=payload)
-        return r.status_code == 200
+        res = requests.post(webhook_url, json={"message": prompt})
+        if res.status_code == 200:
+            data = res.json()
+            return data.get("reply", "✅ Pesan dikirim ke agent.")
+        else:
+            return f"❌ Webhook Error: {res.status_code} - {res.text}"
     except Exception as e:
-        print(f"❌ Gagal kirim ke webhook: {e}")
-        return False
+        return f"❌ Gagal kirim ke webhook: {e}"
 
 def show_chatbot(df_customer):
     st.title("🤖 ChatBot Analisis Customer")
 
-    model_choice = st.selectbox("Gunakan model AI:", ["GPT (OpenAI)", "Gemini (Google)"])
+    model_choice = st.selectbox("Gunakan model AI:", ["GPT (OpenAI)", "Gemini (Google)", "Langsung ke Agent (Webhook)"])
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
@@ -90,17 +89,13 @@ def show_chatbot(df_customer):
         st.session_state.chat_history.append(("user", prompt))
 
         with st.chat_message("assistant"):
-            with st.spinner("Sedang menganalisis..."):
+            with st.spinner("Sedang memproses..."):
                 if model_choice == "GPT (OpenAI)":
                     reply = ask_openai_with_data(prompt, df_customer)
-                else:
+                elif model_choice == "Gemini (Google)":
                     reply = ask_gemini_with_data(prompt, df_customer)
+                else:
+                    reply = send_to_webhook(prompt)
 
                 st.markdown(reply)
                 st.session_state.chat_history.append(("assistant", reply))
-
-                # Kirim ke webhook n8n
-                berhasil = kirim_ke_webhook(prompt, reply, model_choice)
-                if not berhasil:
-                    st.warning("⚠️ Gagal mengirim data ke webhook.")
-
