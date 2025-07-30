@@ -49,7 +49,7 @@ def show(df_customer):
             new_row = [tanggal_submit, str(tanggal_meeting), nama, nama_perusahaan, email, whatsapp, website, instagram, kebutuhan_layanan, sumber, link_kalender]
             sheet.append_row(new_row)
             st.success("✅ Data berhasil ditambahkan.")
-            st.experimental_rerun()
+            st.rerun()
 
     st.markdown("---")
     st.subheader("✏️ Edit Data Customer")
@@ -82,7 +82,7 @@ def show(df_customer):
                 updated_row = [tanggal_submit, tanggal_meeting, nama, nama_perusahaan, email, whatsapp, website, instagram, kebutuhan_layanan, sumber, link_kalender]
                 sheet.update(f"A{edit_index}:K{edit_index}", [updated_row])
                 st.success(f"✅ Baris ke-{edit_index} berhasil diperbarui.")
-                st.experimental_rerun()
+                st.rerun()
 
     st.markdown("---")
     st.subheader("🗑️ Hapus Data Customer")
@@ -91,4 +91,4 @@ def show(df_customer):
     if st.button("Hapus Baris"):
         sheet.delete_rows(index_to_delete)
         st.success(f"✅ Baris ke-{index_to_delete} berhasil dihapus.")
-        st.experimental_rerun()
+        st.rerun()
