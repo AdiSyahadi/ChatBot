@@ -1,6 +1,8 @@
 # main.py
 import streamlit as st
 import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
 
 # Import modul-modul halaman
 from home import home
@@ -15,19 +17,26 @@ st.markdown("""<style>
     /* (Salin style CSS-mu di sini) */
 </style>""", unsafe_allow_html=True)
 
-# ========== LOAD GOOGLE SHEET ========== #
-sheet2_url = st.secrets["GOOGLE_SHEET_URL"]
+# ========== AUTENTIKASI & KONEKSI GOOGLE SHEET ========== #
+SERVICE_ACCOUNT = st.secrets["google_service_account"]
+SHEET_ID = st.secrets["GOOGLE_SHEET_ID"]
 
 @st.cache_data
-def load_data(sheet_url):
-    return pd.read_csv(sheet_url)
+def load_data_from_google_sheet():
+    creds = Credentials.from_service_account_info(SERVICE_ACCOUNT, scopes=[
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ])
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key(SHEET_ID)
+    worksheet = sheet.sheet1  # atau gunakan .worksheet("Nama Sheet")
+    data = worksheet.get_all_records()
+    return pd.DataFrame(data)
 
 try:
-    df_customer_raw = load_data(sheet2_url)
-    # Hapus kolom Unnamed jika ada (biasanya dari index)
-    df_customer = df_customer_raw.loc[:, ~df_customer_raw.columns.str.contains("^Unnamed")]
+    df_customer = load_data_from_google_sheet()
 except Exception as e:
-    st.error("❌ Gagal memuat data Google Sheets")
+    st.error("❌ Gagal memuat data dari Google Sheets. Pastikan akses dan ID sudah benar.")
     st.stop()
 
 # ========== SIDEBAR ========== #
