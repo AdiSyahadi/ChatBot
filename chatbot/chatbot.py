@@ -5,13 +5,13 @@ import openai
 from openai import OpenAI
 import google.generativeai as genai
 from google.api_core.exceptions import InvalidArgument
-import requests  # ← Tambah import untuk kirim ke webhook
+import requests  # Untuk kirim ke webhook
 
 # Load API Key
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 gemini_api_key = os.getenv("GEMINI_API_KEY")
-webhook_url = os.getenv("AGENT_WEBHOOK_URL")  # ← Tambahkan ini di .env
+webhook_url = os.getenv("AGENT_WEBHOOK_URL")  # URL Webhook ke n8n
 
 openai_client = OpenAI(api_key=openai_api_key)
 if gemini_api_key:
@@ -61,12 +61,12 @@ Sekarang jawab pertanyaan ini:
 
 def send_to_webhook(prompt):
     if not webhook_url:
-        return "❌ Webhook URL belum diset di .env (AGENT_WEBHOOK_URL)"
+        return "❌ Webhook URL belum diset di environment (AGENT_WEBHOOK_URL)"
     try:
-        res = requests.post(webhook_url, json={"message": prompt})
+        res = requests.post(webhook_url, json={"prompt": prompt})
         if res.status_code == 200:
             data = res.json()
-            return data.get("reply", "✅ Pesan dikirim ke agent.")
+            return data.get("reply") or data.get("output") or "✅ Pesan dikirim ke agent, tapi tidak ada balasan."
         else:
             return f"❌ Webhook Error: {res.status_code} - {res.text}"
     except Exception as e:
