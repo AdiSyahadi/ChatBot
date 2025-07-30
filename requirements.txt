@@ -4,6 +4,11 @@ streamlit-autorefresh
 openai>=1.0.0
 google-generativeai
 python-dotenv
+
+# Untuk koneksi Google Sheets dengan gspread
+gspread
+oauth2client
+
+# Tambahan jika kamu pakai SQL (optional, hanya jika pakai MySQL/SQLAlchemy)
 sqlalchemy
 mysql-connector-python
-gspread oauth2client
