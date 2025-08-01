@@ -75,7 +75,7 @@ def send_to_webhook(prompt):
 def show_chatbot(df_customer):
     st.title("🤖 ChatBot Analisis Customer")
 
-    model_choice = st.selectbox("Gunakan model AI:", ["GPT (OpenAI)", "Gemini (Google)", "Langsung ke Agent (Webhook)"])
+    model_choice = st.selectbox("Gunakan model AI:", ["GPT (OpenAI)", "Gemini (Google)", "Agent N8N"])
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
