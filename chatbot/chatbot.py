@@ -6,6 +6,7 @@ from openai import OpenAI
 import google.generativeai as genai
 from google.api_core.exceptions import InvalidArgument
 import requests  # Untuk kirim ke webhook
+import json
 
 # Load API Key
 load_dotenv()
@@ -16,6 +17,7 @@ webhook_url = os.getenv("AGENT_WEBHOOK_URL")  # URL Webhook ke n8n
 openai_client = OpenAI(api_key=openai_api_key)
 if gemini_api_key:
     genai.configure(api_key=gemini_api_key)
+
 
 def ask_openai_with_data(prompt, df):
     try:
@@ -39,6 +41,7 @@ Sekarang jawab pertanyaan ini:
     except Exception as e:
         return f"❌ GPT Error: {e}"
 
+
 def ask_gemini_with_data(prompt, df):
     if not gemini_api_key:
         return "❌ GEMINI_API_KEY belum diset"
@@ -59,18 +62,33 @@ Sekarang jawab pertanyaan ini:
     except Exception as e:
         return f"❌ Gemini Error: {e}"
 
+
 def send_to_webhook(prompt):
+    """Kirim prompt ke webhook N8N dengan penanganan error aman."""
     if not webhook_url:
         return "❌ Webhook URL belum diset di environment (AGENT_WEBHOOK_URL)"
     try:
         res = requests.post(webhook_url, json={"prompt": prompt})
+
         if res.status_code == 200:
-            data = res.json()
-            return data.get("reply") or data.get("output") or "✅ Pesan dikirim ke agent, tapi tidak ada balasan."
+            # Kalau body kosong
+            if not res.text.strip():
+                return "✅ Pesan terkirim, tapi tidak ada balasan dari agent."
+
+            # Coba parsing JSON
+            try:
+                data = res.json()
+                return data.get("reply") or data.get("output") or "✅ Pesan terkirim, tapi tidak ada balasan JSON."
+            except ValueError:
+                # Kalau bukan JSON valid, kirim raw text
+                return f"✅ Pesan terkirim. Respons teks: {res.text}"
+
         else:
             return f"❌ Webhook Error: {res.status_code} - {res.text}"
+
     except Exception as e:
         return f"❌ Gagal kirim ke webhook: {e}"
+
 
 def show_chatbot(df_customer):
     st.title("🤖 ChatBot Analisis Customer")
@@ -80,10 +98,12 @@ def show_chatbot(df_customer):
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
+    # Tampilkan history chat
     for role, msg in st.session_state.chat_history:
         with st.chat_message(role):
             st.markdown(msg)
 
+    # Input chat
     if prompt := st.chat_input("Tanya tentang data customer..."):
         st.chat_message("user").markdown(prompt)
         st.session_state.chat_history.append(("user", prompt))
