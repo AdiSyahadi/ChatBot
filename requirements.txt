@@ -12,3 +12,7 @@ oauth2client
 # Tambahan jika kamu pakai SQL (optional, hanya jika pakai MySQL/SQLAlchemy)
 sqlalchemy
 mysql-connector-python
+
+# Untuk LangChain dan dependencies tambahan
+langchain
+requests
