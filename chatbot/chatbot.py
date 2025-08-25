@@ -1,3 +1,4 @@
+import streamlit as st  # Make sure to import Streamlit
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.llms import OpenAI
@@ -16,7 +17,8 @@ llm_openai = OpenAI(api_key=openai_api_key, model="gpt-3.5-turbo")
 genai.configure(api_key=gemini_api_key)
 
 # Fungsi untuk request Gemini menggunakan LangChain
-def ask_gemini_with_langchain(prompt):
+def ask_gemini_with_langchain(prompt, df):
+    df_sample = df.head(10).to_csv(index=False)
     template = """
     Berikut adalah data customer yang diminta:
 
@@ -30,7 +32,7 @@ def ask_gemini_with_langchain(prompt):
     )
     chain = LLMChain(llm=genai.GenerativeModel("models/gemini-1.5-flash"), prompt=prompt_with_data)
     
-    response = chain.run(df_sample="Data customer sample", prompt=prompt)
+    response = chain.run(df_sample=df_sample, prompt=prompt)
     return response
 
 # Fungsi untuk request OpenAI menggunakan LangChain
@@ -82,7 +84,7 @@ def show_chatbot(df_customer):
         if model_choice == "GPT (OpenAI)":
             reply = ask_openai_with_langchain(prompt, df_customer)
         elif model_choice == "Gemini (Google)":
-            reply = ask_gemini_with_langchain(prompt)
+            reply = ask_gemini_with_langchain(prompt, df_customer)
         else:
             reply = send_to_webhook(prompt)
 
