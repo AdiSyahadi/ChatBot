@@ -20,13 +20,13 @@ st.markdown("""
 sheet2_url = st.secrets["GOOGLE_SHEET_URL"]
 SERVICE_ACCOUNT = st.secrets["google_service_account"]
 SHEET_ID = st.secrets["GOOGLE_SHEET_ID"]
-openai_api_key = st.secrets["OPENAI_API_KEY"]
-gemini_api_key = st.secrets["GEMINI_API_KEY"]
 
 # ========== FUNGSI ========== #
+@st.cache_data
+def load_data(sheet_url):
+    return pd.read_csv(sheet_url)
 
 def load_data_from_google_sheet():
-    """Memuat data customer dari Google Sheets"""
     try:
         creds = Credentials.from_service_account_info(SERVICE_ACCOUNT, scopes=[
             "https://www.googleapis.com/auth/spreadsheets",
@@ -61,11 +61,9 @@ def load_data_from_google_sheet():
 
 # ========== LOAD DATA ========== #
 try:
-    # Mengambil data dari Google Sheet
+    df_customer_raw = load_data(sheet2_url)
+    df_customer_raw = df_customer_raw.loc[:, ~df_customer_raw.columns.str.contains("^Unnamed")]
     df_customer = load_data_from_google_sheet()
-    if df_customer.empty:
-        st.error("❌ Data customer kosong.")
-        st.stop()
 except Exception as e:
     st.error("❌ Gagal memuat data dari Google Sheets.")
     st.error(str(e))
@@ -82,5 +80,4 @@ if menu == "🏠 Home":
 elif menu == "📗 Data Customer":
     data_customer.show(df_customer)
 elif menu == "🤖 ChatBot":
-    # Memanggil fungsi chatbot dari chatbot.py
-    chatbot.show_chatbot(df_customer, openai_api_key, gemini_api_key)
+    chatbot.show_chatbot(df_customer)
