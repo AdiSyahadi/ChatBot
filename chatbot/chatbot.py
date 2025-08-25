@@ -2,7 +2,6 @@ import streamlit as st
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.llms import OpenAI
-from langchain.runnables import Runnable
 import google.generativeai as genai
 import requests
 import pandas as pd
@@ -15,44 +14,20 @@ webhook_url = "YOUR_WEBHOOK_URL"
 # Setup LangChain untuk OpenAI
 llm_openai = OpenAI(api_key=openai_api_key, model="gpt-3.5-turbo")
 
-# Setup LangChain untuk Gemini - Wrap Gemini model into a Runnable
-class GeminiRunnable(Runnable):
-    def __init__(self, model_name="models/gemini-1.5-flash"):
-        self.model_name = model_name
-        genai.configure(api_key=gemini_api_key)
+# Setup LangChain untuk Gemini
+genai.configure(api_key=gemini_api_key)
 
-    def invoke(self, inputs):
-        prompt = inputs["prompt"]
-        df_sample = inputs["df_sample"]
-        response = genai.GenerativeModel(self.model_name).generate_content(f"""
-        Berikut adalah data customer yang diminta:
-
-        {df_sample}
-
-        Pertanyaan: {prompt}
-        """)
-        return response.text
-
-# Fungsi untuk request Gemini menggunakan LangChain
-def ask_gemini_with_langchain(prompt, df):
+# Fungsi untuk request Gemini menggunakan API langsung
+def ask_gemini(prompt, df):
     df_sample = df.head(10).to_csv(index=False)
-    template = """
+    response = genai.GenerativeModel("models/gemini-1.5-flash").generate_content(f"""
     Berikut adalah data customer yang diminta:
 
     {df_sample}
 
     Pertanyaan: {prompt}
-    """
-    prompt_with_data = PromptTemplate(
-        input_variables=["df_sample", "prompt"],
-        template=template
-    )
-    
-    gemini_runnable = GeminiRunnable()
-    chain = LLMChain(llm=gemini_runnable, prompt=prompt_with_data)
-    
-    response = chain.run(df_sample=df_sample, prompt=prompt)
-    return response
+    """)
+    return response.text
 
 # Fungsi untuk request OpenAI menggunakan LangChain
 def ask_openai_with_langchain(prompt, df):
@@ -103,7 +78,7 @@ def show_chatbot(df_customer):
         if model_choice == "GPT (OpenAI)":
             reply = ask_openai_with_langchain(prompt, df_customer)
         elif model_choice == "Gemini (Google)":
-            reply = ask_gemini_with_langchain(prompt, df_customer)
+            reply = ask_gemini(prompt, df_customer)
         else:
             reply = send_to_webhook(prompt)
 
