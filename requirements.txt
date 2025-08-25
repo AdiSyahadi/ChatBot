@@ -17,3 +17,5 @@ mysql-connector-python
 langchain
 requests
 langchain-community  # Pastikan ini ada
+langchain_google_genai
+
