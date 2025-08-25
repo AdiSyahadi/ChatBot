@@ -1,83 +1,86 @@
 import streamlit as st
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from langchain.llms import OpenAI
+import google.generativeai as genai
+import requests
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
-from google.auth.exceptions import DefaultCredentialsError
 
-# Import modul-modul halaman
-from home import home
-from data_customer import data_customer
-from chatbot import chatbot
+# Setup untuk LangChain
+openai_api_key = "YOUR_OPENAI_API_KEY"
+gemini_api_key = "YOUR_GEMINI_API_KEY"
+webhook_url = "YOUR_WEBHOOK_URL"
 
-# ========== STYLING ========== #
-st.markdown("""
-<style>
-    /* (Salin style CSS-mu di sini) */
-</style>
-""", unsafe_allow_html=True)
+# Setup LangChain untuk OpenAI
+llm_openai = OpenAI(api_key=openai_api_key, model="gpt-3.5-turbo")
 
-# ========== AMBIL VARIABEL DARI SECRETS ========== #
-sheet2_url = st.secrets["GOOGLE_SHEET_URL"]
-SERVICE_ACCOUNT = st.secrets["google_service_account"]
-SHEET_ID = st.secrets["GOOGLE_SHEET_ID"]
+# Setup LangChain untuk Gemini
+genai.configure(api_key=gemini_api_key)
 
-# ========== FUNGSI ========== #
-@st.cache_data
-def load_data(sheet_url):
-    return pd.read_csv(sheet_url)
+# Fungsi untuk request Gemini menggunakan API langsung
+def ask_gemini(prompt, df):
+    df_sample = df.head(10).to_csv(index=False)
+    response = genai.GenerativeModel("models/gemini-1.5-flash").generate_content(f"""
+    Berikut adalah data customer yang diminta:
 
-def load_data_from_google_sheet():
-    try:
-        creds = Credentials.from_service_account_info(SERVICE_ACCOUNT, scopes=[
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive",
-        ])
-    except DefaultCredentialsError as e:
-        st.error("❌ Gagal membuat kredensial dari service account.")
-        st.error(str(e))
-        st.stop()
-    except Exception as e:
-        st.error("❌ Error saat memuat kredensial:")
-        st.error(str(e))
-        st.stop()
+    {df_sample}
 
-    try:
-        client = gspread.authorize(creds)
-        sheet = client.open_by_key(SHEET_ID)
-        worksheet = sheet.sheet1  # atau worksheet("Sheet1")
-        data = worksheet.get_all_records()
-        return pd.DataFrame(data)
-    except gspread.exceptions.SpreadsheetNotFound:
-        st.error("❌ Spreadsheet tidak ditemukan. Periksa kembali GOOGLE_SHEET_ID.")
-        st.stop()
-    except gspread.exceptions.APIError as e:
-        st.error("❌ Gagal mengakses Google Sheets API.")
-        st.error(str(e))
-        st.stop()
-    except Exception as e:
-        st.error("❌ Error tidak terduga saat memuat Google Sheets:")
-        st.error(str(e))
-        st.stop()
+    Pertanyaan: {prompt}
+    """)
+    return response.text
 
-# ========== LOAD DATA ========== #
-try:
-    df_customer_raw = load_data(sheet2_url)
-    df_customer_raw = df_customer_raw.loc[:, ~df_customer_raw.columns.str.contains("^Unnamed")]
-    df_customer = load_data_from_google_sheet()
-except Exception as e:
-    st.error("❌ Gagal memuat data dari Google Sheets.")
-    st.error(str(e))
-    st.stop()
+# Fungsi untuk request OpenAI menggunakan LangChain
+def ask_openai_with_langchain(prompt, df):
+    df_sample = df.head(10).to_csv(index=False)
+    template = """
+    Berikut adalah data customer (10 baris pertama):
+    {df_sample}
 
-# ========== SIDEBAR ========== #
-with st.sidebar:
-    st.title("📊 Navigasi")
-    menu = st.radio("Pilih halaman:", ["🏠 Home", "📗 Data Customer", "🤖 ChatBot"])
+    Sekarang jawab pertanyaan ini:
+    {prompt}
+    """
+    prompt_with_data = PromptTemplate(
+        input_variables=["df_sample", "prompt"],
+        template=template
+    )
+    chain = LLMChain(llm=llm_openai, prompt=prompt_with_data)
+    
+    response = chain.run(df_sample=df_sample, prompt=prompt)
+    return response
 
-# ========== ROUTING ========== #
-if menu == "🏠 Home":
-    home.show()
-elif menu == "📗 Data Customer":
-    data_customer.show(df_customer)
-elif menu == "🤖 ChatBot":
-    chatbot.show_chatbot(df_customer)
+# Fungsi Webhook dengan LangChain
+def send_to_webhook(prompt):
+    res = requests.post(webhook_url, json={"prompt": prompt})
+    if res.status_code == 200:
+        return res.json().get("reply", "No response")
+    return f"Error: {res.status_code}"
+
+# Contoh utama dengan LangChain dan Streamlit
+def show_chatbot(df_customer):
+    st.title("🤖 ChatBot Analisis Customer")
+
+    model_choice = st.selectbox("Gunakan model AI:", ["GPT (OpenAI)", "Gemini (Google)", "Agent N8N"])
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    # Tampilkan history chat
+    for role, msg in st.session_state.chat_history:
+        with st.chat_message(role):
+            st.markdown(msg)
+
+    # Input chat
+    if prompt := st.chat_input("Tanya tentang data customer..."):
+        st.chat_message("user").markdown(prompt)
+        st.session_state.chat_history.append(("user", prompt))
+
+        # Gunakan LangChain untuk mengatur alur
+        if model_choice == "GPT (OpenAI)":
+            reply = ask_openai_with_langchain(prompt, df_customer)
+        elif model_choice == "Gemini (Google)":
+            reply = ask_gemini(prompt, df_customer)
+        else:
+            reply = send_to_webhook(prompt)
+
+        st.markdown(reply)
+        st.session_state.chat_history.append(("assistant", reply))
