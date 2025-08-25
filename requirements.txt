@@ -16,3 +16,4 @@ mysql-connector-python
 # Untuk LangChain dan dependencies tambahan
 langchain
 requests
+langchain-community  # Pastikan ini ada
